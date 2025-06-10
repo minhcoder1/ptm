@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gửi lời nhắn 💌</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background-color: black;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      canvas#heartCanvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -1;
+      }
+
+      .heart {
+        position: absolute;
+        font-size: 24px;
+        animation: flyUp 2s ease-out forwards;
+        pointer-events: none;
+        opacity: 0.9;
+      }
+
+      .big-heart {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        width: 300px;
+        height: 300px;
+        background: url("https://i.imgur.com/pBb9RHU.png") no-repeat
+          center/contain;
+        animation: popHeart 2s ease-out forwards;
+        pointer-events: none;
+        z-index: 50;
+      }
+
+      @keyframes flyUp {
+        0% {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-150px) scale(1.5);
+          opacity: 0;
+        }
+      }
+
+      @keyframes popHeart {
+        0% {
+          transform: translate(-50%, -50%) scale(0);
+          opacity: 0;
+        }
+        30% {
+          transform: translate(-50%, -50%) scale(1.3);
+          opacity: 1;
+        }
+        60% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0;
+        }
+      }
+
+      @keyframes bgFloat {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+
+      .floating-emoji {
+        position: absolute;
+        animation: bgFloat 4s ease-in-out infinite;
+        font-size: 36px;
+        opacity: 0.4;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden"
+  >
+    <canvas id="heartCanvas"></canvas>
+    <div class="floating-emoji" style="top: 10%; left: 10%">💖</div>
+    <div
+      class="floating-emoji"
+      style="top: 20%; right: 15%; animation-delay: 1s"
+    >
+      💘
+    </div>
+    <div
+      class="floating-emoji"
+      style="bottom: 15%; left: 20%; animation-delay: 2s"
+    >
+      💕
+    </div>
+    <div
+      class="floating-emoji"
+      style="bottom: 10%; right: 10%; animation-delay: 3s"
+    >
+      💓
+    </div>
+
+    <div class="bg-white shadow-xl rounded-2xl p-6 w-full max-w-md z-10">
+      <h1 class="text-2xl font-bold text-pink-500 text-center mb-4">
+        💖 Gửi lời nhắn tới Crush 💖
+      </h1>
+      <form id="confessForm" class="flex flex-col gap-4">
+        <input
+          type="text"
+          id="recipient"
+          class="border rounded-xl p-3"
+          placeholder="Tên người nhận"
+          required
+        />
+        <input
+          type="password"
+          id="password"
+          class="border rounded-xl p-3"
+          placeholder="Mật khẩu đọc thư"
+          required
+        />
+        <textarea
+          id="message"
+          class="border rounded-xl p-3 h-32"
+          placeholder="Viết lời nhắn tại đây..."
+          required
+        ></textarea>
+        <button
+          type="submit"
+          class="bg-pink-500 text-white font-semibold py-2 px-4 rounded-xl hover:bg-pink-600 transition"
+        >
+          Gửi lời nhắn
+        </button>
+      </form>
+      <div
+        id="successMessage"
+        class="hidden text-green-600 font-medium text-center mt-4"
+      ></div>
+      <div
+        id="copySection"
+        class="hidden flex flex-col items-center gap-2 mt-2"
+      >
+        <button
+          id="copyLink"
+          class="bg-blue-500 text-white px-3 py-1 rounded-xl hover:bg-blue-600"
+        >
+          📋 Sao chép link
+        </button>
+        <span id="copyStatus" class="text-sm text-gray-600"></span>
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById("confessForm");
+      const success = document.getElementById("successMessage");
+      const copySection = document.getElementById("copySection");
+      const copyButton = document.getElementById("copyLink");
+      const copyStatus = document.getElementById("copyStatus");
+
+      form?.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const recipient = document.getElementById("recipient").value;
+        const password = document.getElementById("password").value;
+        const message = document.getElementById("message").value;
+
+        const id = Math.random().toString(36).substring(2, 10);
+        const data = {
+          recipient,
+          password,
+          msg: message,
+          time: new Date().toLocaleString(),
+        };
+
+        localStorage.setItem("confession_" + id, JSON.stringify(data));
+
+        const link = window.location.origin + "/doc.html?id=" + id;
+        success.innerHTML = `✅ Thư đã được gửi!<br>📎 Gửi link này cho người nhận: <a href="${link}" class="text-blue-600 underline" target="_blank">${link}</a>`;
+        success.classList.remove("hidden");
+        copySection.classList.remove("hidden");
+        copyButton.setAttribute("data-link", link);
+
+        form.reset();
+        launchHearts();
+        showBigHeart();
+      });
+
+      copyButton?.addEventListener("click", () => {
+        const link = copyButton.getAttribute("data-link");
+        navigator.clipboard.writeText(link).then(
+          () => {
+            copyStatus.textContent = "✅ Đã sao chép link vào clipboard!";
+          },
+          () => {
+            copyStatus.textContent =
+              "❌ Không thể sao chép. Vui lòng sao chép thủ công.";
+          }
+        );
+      });
+
+      function launchHearts() {
+        for (let i = 0; i < 10; i++) {
+          const heart = document.createElement("div");
+          heart.className = "heart";
+          heart.textContent = "❤️";
+          heart.style.left = Math.random() * 90 + "%";
+          heart.style.bottom = "20px";
+          document.body.appendChild(heart);
+
+          setTimeout(() => {
+            heart.remove();
+          }, 2000);
+        }
+      }
+
+      function showBigHeart() {
+        const bigHeart = document.createElement("div");
+        bigHeart.className = "big-heart";
+        document.body.appendChild(bigHeart);
+
+        setTimeout(() => {
+          bigHeart.remove();
+        }, 2000);
+      }
+
+      // Canvas animated heart effect
+      const canvas = document.getElementById("heartCanvas");
+      const ctx = canvas.getContext("2d");
+      let width,
+        height,
+        particles = [];
+
+      function resizeCanvas() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      function drawHeart(x, y, size, color) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.bezierCurveTo(
+          x + size / 2,
+          y - size / 2,
+          x + size * 1.5,
+          y + size / 2,
+          x,
+          y + size * 1.5
+        );
+        ctx.bezierCurveTo(
+          x - size * 1.5,
+          y + size / 2,
+          x - size / 2,
+          y - size / 2,
+          x,
+          y
+        );
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      function createParticles() {
+        for (let i = 0; i < 2; i++) {
+          particles.push({
+            x: width / 2 + (Math.random() - 0.5) * 200,
+            y: height / 2 + (Math.random() - 0.5) * 200,
+            size: Math.random() * 3 + 1,
+            alpha: 1,
+            color: "rgba(255,0,0,0.6)",
+            speedX: (Math.random() - 0.5) * 1,
+            speedY: (Math.random() - 0.5) * 1,
+          });
+        }
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+        createParticles();
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.speedX;
+          p.y += p.speedY;
+          p.alpha -= 0.005;
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+            i--;
+            continue;
+          }
+          ctx.globalAlpha = p.alpha;
+          drawHeart(p.x, p.y, p.size * 10, p.color);
+        }
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(animate);
+      }
+      animate();
+    </script>
+  </body>
+</html>
